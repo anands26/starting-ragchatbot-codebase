@@ -28,8 +28,10 @@ function setupEventListeners() {
     chatInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') sendMessage();
     });
-    
-    
+
+    // New chat button
+    document.getElementById('newChatBtn').addEventListener('click', startNewChat);
+
     // Suggested questions
     document.querySelectorAll('.suggested-item').forEach(button => {
         button.addEventListener('click', (e) => {
@@ -122,16 +124,19 @@ function addMessage(content, type, sources = null, isWelcome = false) {
     let html = `<div class="message-content">${displayContent}</div>`;
     
     if (sources && sources.length > 0) {
+        // Build sources as a clean list, one per line
         const sourcesHtml = sources.map(s => {
-            const title = escapeHtml(s.title);
-            return s.url
-                ? `<a href="${s.url}" target="_blank">${title}</a>`
-                : title;
-        }).join(', ');
+            const displayTitle = escapeHtml(s.title);
+            if (s.url) {
+                return `<a href="${s.url}" target="_blank" class="source-link">${displayTitle}</a>`;
+            }
+            return `<span class="source-link">${displayTitle}</span>`;
+        }).join('');
+
         html += `
             <details class="sources-collapsible">
                 <summary class="sources-header">Sources</summary>
-                <div class="sources-content">${sourcesHtml}</div>
+                <div class="sources-list">${sourcesHtml}</div>
             </details>
         `;
     }
@@ -156,6 +161,31 @@ async function createNewSession() {
     currentSessionId = null;
     chatMessages.innerHTML = '';
     addMessage('Welcome to the Course Materials Assistant! I can help you with questions about courses, lessons and specific content. What would you like to know?', 'assistant', null, true);
+}
+
+async function startNewChat() {
+    try {
+        // Call backend to create new session (and clear old one)
+        const response = await fetch(`${API_URL}/session/new`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: currentSessionId })
+        });
+        const data = await response.json();
+
+        // Update frontend state
+        currentSessionId = data.session_id;
+
+        // Clear chat UI and show welcome message
+        chatMessages.innerHTML = '';
+        addMessage('Welcome to the Course Materials Assistant! I can help you with questions about courses, lessons and specific content. What would you like to know?', 'assistant', null, true);
+
+        // Reset input state
+        chatInput.value = '';
+        chatInput.focus();
+    } catch (error) {
+        console.error('Error starting new chat:', error);
+    }
 }
 
 // Load course statistics

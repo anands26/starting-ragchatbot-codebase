@@ -73,6 +73,14 @@ async def query_documents(request: QueryRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/session/new")
+async def new_session(request: Optional[dict] = None):
+    """Create a new chat session, optionally clearing the old one."""
+    if request and request.get("session_id"):
+        rag_system.session_manager.clear_session(request["session_id"])
+    new_session_id = rag_system.session_manager.create_session()
+    return {"session_id": new_session_id}
+
 @app.get("/api/courses", response_model=CourseStats)
 async def get_course_stats():
     """Get course analytics and statistics"""
